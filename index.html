@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generalized QTI Hottext Question Builder</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 25px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            color: #2d3748;
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            box-sizing: border-box; /* Ensures padding doesn't increase total width */
+        }
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            border-color: #63b3ed;
+            box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5);
+            outline: none;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            margin-top: 20px;
+            margin-right: 10px;
+            background-color: #4299e1;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        button:hover {
+            background-color: #3182ce;
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button.red-btn {
+            background-color: #ef4444;
+        }
+        button.red-btn:hover {
+            background-color: #dc2626;
+        }
+        h2, h3 {
+            margin-top: 30px;
+            margin-bottom: 15px;
+            color: #2d3748;
+            font-weight: 700;
+        }
+        .option-group {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #fbfbfc;
+            position: relative;
+        }
+        .correct-options-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            padding: 10px 0;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #fbfbfc;
+        }
+        .correct-options-container label {
+            display: flex;
+            align-items: center;
+            margin-top: 0;
+            margin-bottom: 0;
+            font-weight: normal;
+        }
+        .correct-options-container input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center mb-6">Generalized QTI Hottext Question Builder</h1>
+
+        <section>
+            <h2 class="text-2xl">Question Details</h2>
+            <label for="title">Question Title:</label>
+            <input type="text" id="title" placeholder="Enter title (e.g., Identify Key Terms)" required />
+
+            <label for="questionPrompt">Question Prompt:</label>
+            <input type="text" id="questionPrompt" placeholder="e.g., Select the highlighted terms in the paragraph." required />
+
+            <label for="promptImg">Prompt Image URL (optional):</label>
+            <input type="text" id="promptImg" placeholder="e.g., https://example.com/image.png" />
+
+            <label for="incorrectFeedbackImg">Incorrect Feedback Image URL (optional):</label>
+            <input type="text" id="incorrectFeedbackImg" placeholder="e.g., https://example.com/wrong.png" />
+        </section>
+
+        <section>
+            <h2 class="text-2xl">Assessment Stimulus (Optional Context)</h2>
+            <p class="text-sm text-gray-600 mb-2">If your question refers to an external stimulus (e.g., a reading passage), provide its details.</p>
+            <label for="stimulusId">Stimulus Identifier:</label>
+            <input type="text" id="stimulusId" placeholder="e.g., ReadingPassage1" />
+
+            <label for="stimulusHref">Stimulus Href (URL/Path):</label>
+            <input type="text" id="stimulusHref" placeholder="e.g., stimuli/MyReadingPassage.xml" />
+
+            <label for="stimulusTitle">Stimulus Title:</label>
+            <input type="text" id="stimulusTitle" placeholder="e.g., Passage on Climate Change" />
+        </section>
+
+        <section>
+            <h2 class="text-2xl">Hottext Content & Selection</h2>
+            <p class="text-sm text-gray-600 mb-2">
+                Type your paragraph here. To define a hottext, use the format:
+                <code class="bg-gray-100 p-1 rounded-md">[[Your Hottext Text::unique_identifier]]</code>.
+                Example: <code class="bg-gray-100 p-1 rounded-md">This is a [[sample::H1]] text.</code>
+            </p>
+            <textarea id="hottextContent" oninput="updateCorrectOptionsCheckboxes()" rows="8" placeholder="Type your full paragraph here with [[hottext::identifier]] markup."></textarea>
+
+            <label>Select Correct Hottext Identifiers:</label>
+            <div id="correctOptionsCheckboxes" class="correct-options-container">
+                <!-- Checkboxes will be dynamically added here -->
+                No hottext options detected yet. Type in the text area above.
+            </div>
+        </section>
+
+        <section>
+            <h2 class="text-2xl">Feedback Settings</h2>
+
+            <div class="option-group">
+                <h3>Modal Feedback (Appears in a pop-up)</h3>
+                <label for="correctModalFeedback">Correct Modal Feedback Text:</label>
+                <textarea id="correctModalFeedback" placeholder="e.g., You correctly identified all the hottext terms!"></textarea>
+
+                <label for="incorrectModalFeedback">Incorrect Modal Feedback Text:</label>
+                <textarea id="incorrectModalFeedback" placeholder="e.g., Please review the passage and try again."></textarea>
+            </div>
+
+            <div class="option-group">
+                <h3>Inline Feedback (Appears directly in the content area)</h3>
+                <label for="correctInlineFeedback">Correct Inline Feedback Text (optional):</label>
+                <textarea id="correctInlineFeedback" placeholder="e.g., Well done!"></textarea>
+
+                <label for="incorrectInlineFeedback">Incorrect Inline Feedback Text (optional):</label>
+                <textarea id="incorrectInlineFeedback" placeholder="e.g., Not quite, keep practicing."></textarea>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="text-2xl">Metadata (Informational - not in QTI XML)</h2>
+            <p class="text-sm text-gray-600 mb-2">This data will be output as a separate JSON object alongside the XML.</p>
+            <label for="metaSubject">Subject:</label>
+            <input type="text" id="metaSubject" placeholder="e.g., ELA" />
+
+            <label for="metaGrade">Grade Level:</label>
+            <input type="text" id="metaGrade" placeholder="e.g., 6" />
+
+            <label for="metaStandard">Standard:</label>
+            <input type="text" id="metaStandard" placeholder="e.g., Reading Comprehension" />
+
+            <label for="metaLesson">Lesson:</label>
+            <input type="text" id="metaLesson" placeholder="e.g., Vocabulary in Context" />
+
+            <label for="metaDifficulty">Difficulty:</label>
+            <input type="text" id="metaDifficulty" placeholder="e.g., medium" />
+        </section>
+
+        <div class="mt-8">
+            <button onclick="generateOutput()">Generate QTI XML & Metadata</button>
+            <button onclick="downloadXML()" class="red-btn">Download QTI XML</button>
+            <button onclick="downloadMetadata()" class="red-btn">Download Metadata JSON</button>
+        </div>
+
+        <section>
+            <h2 class="text-2xl">Generated QTI XML</h2>
+            <textarea id="outputXML" readonly class="bg-gray-100"></textarea>
+        </section>
+
+        <section>
+            <h2 class="text-2xl">Generated Metadata JSON</h2>
+            <textarea id="outputMetadata" readonly class="bg-gray-100"></textarea>
+        </section>
+    </div>
+
+    <script>
+        // Helper function to escape XML entities (important for text content)
+        function escapeXML(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/[<>&'"]/g, function (c) {
+                switch (c) {
+                    case '<': return '&lt;';
+                    case '>': return '&gt;';
+                    case '&': return '&amp;';
+                    case '\'': return '&apos;';
+                    case '"': return '&quot;';
+                    default: return c;
+                }
+            });
+        }
+
+        // Function to parse the hottext content and return formatted HTML and identifiers
+        function parseHottextContent() {
+            const hottextContent = document.getElementById('hottextContent').value;
+            // Updated regex to handle potential empty text or identifier parts
+            const hottextRegex = /\[\[(.*?)?::(.*?)?\]\]/g;
+            const detectedIdentifiers = new Set();
+            let htmlContent = hottextContent.replace(hottextRegex, (match, text, identifier) => {
+                const escapedText = escapeXML(text || ''); // Escape text, default to empty string if undefined
+                const escapedIdentifier = escapeXML(identifier || ''); // Escape identifier, default to empty string if undefined
+                if (escapedIdentifier) {
+                    detectedIdentifiers.add(escapedIdentifier);
+                }
+                // Check if the hottext content should be an image or text
+                // For this generalized builder, we assume hottext content is always text unless explicitly stated otherwise (which would require more UI controls)
+                // The prompt was about handling a continuous text with hottext, so we stick to text here.
+                return `<qti-hottext identifier="${escapedIdentifier}">${escapedText}</qti-hottext>`;
+            });
+            // Ensure the content is wrapped in a paragraph for QTI
+            // If the content might span multiple paragraphs, you would need to parse <p> tags properly
+            // For simplicity, wrapping the entire output in one <p> here.
+            htmlContent = `<p>${htmlContent}</p>`;
+            return { html: htmlContent, identifiers: Array.from(detectedIdentifiers) };
+        }
+
+        // Function to dynamically update correct options checkboxes
+        function updateCorrectOptionsCheckboxes() {
+            const { identifiers } = parseHottextContent();
+            const container = document.getElementById('correctOptionsCheckboxes');
+            container.innerHTML = ''; // Clear previous checkboxes
+
+            if (identifiers.length === 0) {
+                container.textContent = 'No hottext options detected yet. Type in the text area above using [[text::identifier]] format.';
+                return;
+            }
+
+            // Keep track of previously checked items to re-check them
+            const previouslyChecked = new Set(
+                Array.from(document.querySelectorAll('input[name="correctHottext"]:checked')).map(cb => cb.value)
+            );
+
+            identifiers.forEach(id => {
+                const label = document.createElement('label');
+                label.className = 'inline-flex items-center';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'correctHottext';
+                checkbox.value = id;
+                checkbox.className = 'form-checkbox h-5 w-5 text-blue-600 rounded'; // Tailwind form-checkbox styling
+                if (previouslyChecked.has(id)) {
+                    checkbox.checked = true; // Re-check if it was previously selected
+                }
+
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(id));
+                container.appendChild(label);
+            });
+        }
+
+        // Function to generate the complete QTI XML and Metadata JSON
+        function generateOutput() {
+            const title = document.getElementById("title").value.trim();
+            const questionPrompt = document.getElementById("questionPrompt").value.trim();
+            const promptImg = document.getElementById("promptImg").value.trim();
+            const incorrectFeedbackImg = document.getElementById("incorrectFeedbackImg").value.trim();
+
+            const stimulusId = document.getElementById("stimulusId").value.trim();
+            const stimulusHref = document.getElementById("stimulusHref").value.trim();
+            const stimulusTitle = document.getElementById("stimulusTitle").value.trim();
+
+            const correctModalFeedback = document.getElementById("correctModalFeedback").value.trim();
+            const incorrectModalFeedback = document.getElementById("incorrectModalFeedback").value.trim();
+            const correctInlineFeedback = document.getElementById("correctInlineFeedback").value.trim();
+            const incorrectInlineFeedback = document.getElementById("incorrectInlineFeedback").value.trim();
+
+            const metaSubject = document.getElementById("metaSubject").value.trim();
+            const metaGrade = document.getElementById("metaGrade").value.trim();
+            const metaStandard = document.getElementById("metaStandard").value.trim();
+            const metaLesson = document.getElementById("metaLesson").value.trim();
+            const metaDifficulty = document.getElementById("metaDifficulty").value.trim();
+
+            // --- Validation ---
+            if (!title) { alert("Please enter a Question Title."); return; }
+            if (!questionPrompt) { alert("Please enter a Question Prompt."); return; }
+
+            const { html: hottextBodyHtml, identifiers: detectedHottextIds } = parseHottextContent();
+            if (detectedHottextIds.length === 0) {
+                alert("No hottext options detected. Please use the [[text::identifier]] format in the content area.");
+                return;
+            }
+
+            const selectedCorrectHottexts = Array.from(document.querySelectorAll('input[name="correctHottext"]:checked')).map(cb => cb.value);
+            if (selectedCorrectHottexts.length === 0) {
+                alert("Please select at least one correct hottext identifier.");
+                return;
+            }
+
+            // --- Build QTI XML ---
+            const itemIdentifier = `hottext-item-${Date.now()}`;
+
+            let stimulusRefXML = '';
+            if (stimulusId && stimulusHref && stimulusTitle) {
+                stimulusRefXML = `\n    <qti-assessment-stimulus-ref identifier="${escapeXML(stimulusId)}" href="${escapeXML(stimulusHref)}" title="${escapeXML(stimulusTitle)}"/>`;
+            }
+
+            let correctValuesXML = selectedCorrectHottexts.map(id => `        <qti-value>${escapeXML(id)}</qti-value>`).join('\n');
+
+            let feedbackBlocksXML = '';
+            if (correctInlineFeedback) {
+                feedbackBlocksXML += `
+    <qti-feedback-block outcome-identifier="FEEDBACK" identifier="CORRECT" show-hide="show">
+        <qti-content-body>
+            <p>${escapeXML(correctInlineFeedback)}</p>
+        </qti-content-body>
+    </qti-feedback-block>`;
+            }
+            if (incorrectInlineFeedback) {
+                feedbackBlocksXML += `
+    <qti-feedback-block outcome-identifier="FEEDBACK" identifier="INCORRECT" show-hide="show">
+        <qti-content-body>
+            <p>${escapeXML(incorrectInlineFeedback)}</p>
+        </qti-content-body>
+    </qti-feedback-block>`;
+            }
+
+
+            const qtiXml = `<?xml version="1.0" encoding="UTF-8"?>
+<qti-assessment-item
+    xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.imsglobal.org/xsd/imsqtiasi_v3p0 https://purl.imsglobal.org/spec/qti/v3p0/schema/xsd/imsqti_asiv3p0_v1p0.xsd"
+    identifier="${itemIdentifier}"
+    title="${escapeXML(title)}"
+    adaptive="false"
+    time-dependent="false">${stimulusRefXML}
+
+    <qti-response-declaration identifier="RESPONSE" cardinality="multiple" base-type="identifier">
+        <qti-correct-response>
+${correctValuesXML}
+        </qti-correct-response>
+    </qti-response-declaration>
+
+    <qti-outcome-declaration identifier="FEEDBACK" cardinality="single" base-type="identifier"/>
+
+    <qti-item-body>
+        ${promptImg ? `<p><img src="${escapeXML(promptImg)}" width="500"/></p>` : ''}
+        <qti-hottext-interaction response-identifier="RESPONSE">
+            <qti-prompt>${escapeXML(questionPrompt)}</qti-prompt>
+            ${hottextBodyHtml}
+        </qti-hottext-interaction>
+${feedbackBlocksXML}
+    </qti-item-body>
+
+    <qti-response-processing template="match_correct">
+        <qti-response-condition>
+            <qti-response-if>
+                <qti-match>
+                    <qti-variable identifier="RESPONSE"/>
+                    <qti-correct identifier="RESPONSE"/>
+                </qti-match>
+                <qti-set-outcome-value identifier="FEEDBACK">
+                    <qti-base-value base-type="identifier">CORRECT</qti-base-value>
+                </qti-set-outcome-value>
+            </qti-response-if>
+            <qti-response-else>
+                <qti-set-outcome-value identifier="FEEDBACK">
+                    <qti-base-value base-type="identifier">INCORRECT</qti-base-value>
+                </qti-set-outcome-value>
+            </qti-response-else>
+        </qti-response-condition>
+    </qti-response-processing>
+
+    <qti-modal-feedback outcome-identifier="FEEDBACK" identifier="CORRECT" show-hide="show" title="Great Job!">
+        <qti-content-body>
+            <p>${escapeXML(correctModalFeedback || 'You answered correctly.')}</p>
+        </qti-content-body>
+    </qti-modal-feedback>
+
+    <qti-modal-feedback outcome-identifier="FEEDBACK" identifier="INCORRECT" show-hide="show" title="Try Again">
+        <qti-content-body>
+            <p>${escapeXML(incorrectModalFeedback || 'Your answer was incorrect. Try again!')}</p>
+            ${incorrectFeedbackImg ? `<img src="${escapeXML(incorrectFeedbackImg)}" width="400"/>` : ''}
+        </qti-content-body>
+    </qti-modal-feedback>
+</qti-assessment-item>`;
+
+            document.getElementById("outputXML").value = qtiXml;
+
+            // --- Build Metadata JSON ---
+            const metadata = {
+                format: "xml",
+                xml_identifier: itemIdentifier, // Link to the generated XML
+                metadata: {
+                    subject: metaSubject,
+                    grade: metaGrade,
+                    standard: metaStandard,
+                    lesson: metaLesson,
+                    difficulty: metaDifficulty
+                }
+            };
+            document.getElementById("outputMetadata").value = JSON.stringify(metadata, null, 2);
+        }
+
+        // --- Download Functions ---
+        function downloadXML() {
+            const xmlContent = document.getElementById("outputXML").value;
+            if (!xmlContent) {
+                alert("No XML to download. Please generate XML first.");
+                return;
+            }
+            const blob = new Blob([xmlContent], { type: "application/xml" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "qti-hottext-item.xml";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        }
+
+        function downloadMetadata() {
+            const metadataContent = document.getElementById("outputMetadata").value;
+            if (!metadataContent) {
+                alert("No metadata to download. Please generate XML & Metadata first.");
+                return;
+            }
+            const blob = new Blob([metadataContent], { type: "application/json" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "qti-hottext-metadata.json";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        }
+
+        // --- Prefill Data and Initialize ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Prefill with example data
+            document.getElementById("title").value = "Robust Hottext Reading Question";
+            document.getElementById("questionPrompt").value = "Select the highlighted terms in the paragraph.";
+            document.getElementById("hottextContent").value = "This is a [[sample::H1]] text with another [[example::H2]].";
+            document.getElementById("stimulusId").value = "Stimulus1";
+            document.getElementById("stimulusHref").value = "stimuli/Stimulus1";
+            document.getElementById("stimulusTitle").value = "English Context";
+            document.getElementById("correctModalFeedback").value = "You correctly selected all highlighted terms.";
+            document.getElementById("incorrectModalFeedback").value = "Please reread the passage and select the highlighted words.";
+            // Inline feedbacks are optional in your example, so leaving them blank on prefill
+
+            document.getElementById("metaSubject").value = "ELA";
+            document.getElementById("metaGrade").value = "6";
+            document.getElementById("metaStandard").value = "Reading Comprehension";
+            document.getElementById("metaLesson").value = "Vocabulary in Context";
+            document.getElementById("metaDifficulty").value = "medium";
+
+            // Update hottext checkboxes based on prefilled content
+            updateCorrectOptionsCheckboxes();
+
+            // Programmatically check the correct options for the prefilled example
+            // This needs to happen *after* checkboxes are generated
+            const correctIdsFromExample = ["H1", "H2"];
+            correctIdsFromExample.forEach(id => {
+                const checkbox = document.querySelector(`input[name="correctHottext"][value="${id}"]`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
